@@ -1,0 +1,19 @@
+{
+  "analytics": {
+    "google_analytics": {
+      "hosts": ["www.google-analytics.com", "googletagmanager.com"],
+      "cookies": ["_ga", "_gid"]
+    }
+  },
+  "ads": {
+    "facebook_pixel": {
+      "hosts": ["connect.facebook.net"],
+      "cookies": ["_fbp"]
+    }
+  },
+  "personalization": {
+    "youtube_embed": {
+      "hosts": ["youtube.com", "youtube-nocookie.com"]
+    }
+  }
+}
