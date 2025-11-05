@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAllConsent, setConsent, clearConsent } from "../core/store";
+import { updateConsent } from "../core/consentMode";
+import type { LoveCookiesInitOptions } from "../types";
 
 const CookieIcon = () => (
   <svg
@@ -20,7 +22,23 @@ const CookieIcon = () => (
   </svg>
 );
 
-const Banner = () => {
+// 👇 add props so TypeScript knows about "options"
+type BannerProps = {
+  options?: LoveCookiesInitOptions;
+};
+
+const Banner: React.FC<BannerProps> = ({ options }) => {
+  const accent = options?.color ?? "#00c471";
+  const policyUrl = options?.policyUrl ?? "/privacy-policy";
+  const position = options?.position ?? "bottom-center";
+
+  const posClass =
+    position === "bottom-left"
+      ? "left-0 right-auto"
+      : position === "bottom-right"
+      ? "right-0 left-auto"
+      : "left-0 right-0"; // center
+
   const [showBanner, setShowBanner] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [preferences, setPreferences] = useState({
@@ -29,24 +47,20 @@ const Banner = () => {
     marketing: false,
   });
 
-  // ✅ Load from localStorage if exists
- useEffect(() => {
-  const stored = getAllConsent();
-  if (!stored || Object.keys(stored).length === 0) {
-    const timer = setTimeout(() => setShowBanner(true), 300);
-    return () => clearTimeout(timer);
-  } else {
-    setPreferences((prev) => ({
-      ...prev,
-      ...stored,
-    }));
-  }
-}, []);
-
+  useEffect(() => {
+    const stored = getAllConsent();
+    if (!stored || Object.keys(stored).length === 0) {
+      const timer = setTimeout(() => setShowBanner(true), 300);
+      return () => clearTimeout(timer);
+    } else {
+      setPreferences((prev) => ({ ...prev, ...stored }));
+    }
+  }, []);
 
   const handleAcceptAll = () => {
     const prefs = { essential: true, analytics: true, marketing: true };
     for (const key in prefs) setConsent(key, prefs[key as keyof typeof prefs]);
+    updateConsent("accepted");
     setPreferences(prefs);
     setShowBanner(false);
   };
@@ -54,6 +68,7 @@ const Banner = () => {
   const handleRejectAll = () => {
     const prefs = { essential: true, analytics: false, marketing: false };
     for (const key in prefs) setConsent(key, prefs[key as keyof typeof prefs]);
+    updateConsent("declined");
     setPreferences(prefs);
     setShowBanner(false);
   };
@@ -61,13 +76,14 @@ const Banner = () => {
   const handleSavePreferences = () => {
     for (const key in preferences)
       setConsent(key, preferences[key as keyof typeof preferences]);
+    updateConsent("accepted");
     setShowModal(false);
     setShowBanner(false);
   };
 
   return (
     <>
-      {/* Developer Reset Button (for testing only) */}
+      {/* Dev-only reset button */}
       <button
         onClick={() => {
           clearConsent();
@@ -86,11 +102,14 @@ const Banner = () => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-safe"
+            className={`fixed bottom-0 ${posClass} z-50 px-4 pb-safe`}
           >
             <div className="mx-auto w-full max-w-2xl bg-white border border-gray-200 rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-start sm:items-center gap-4">
-                <div className="flex-shrink-0 w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+                <div
+                  className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white"
+                  style={{ backgroundColor: accent }}
+                >
                   <CookieIcon />
                 </div>
                 <div>
@@ -98,8 +117,15 @@ const Banner = () => {
                     Cookie Settings
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed mt-1 sm:max-w-sm">
-                    We use cookies to enhance your experience. You can accept
-                    all or customize your preferences.
+                    We use cookies to enhance your experience.{" "}
+                    <a
+                      href={policyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-blue-600 hover:text-blue-800"
+                    >
+                      Privacy Policy
+                    </a>
                   </p>
                 </div>
               </div>
@@ -107,7 +133,8 @@ const Banner = () => {
               <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <button
                   onClick={handleAcceptAll}
-                  className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  style={{ backgroundColor: accent }}
+                  className="px-5 py-2 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none"
                 >
                   Accept All
                 </button>
@@ -184,9 +211,7 @@ const Banner = () => {
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900">
-                          {label}
-                        </h3>
+                        <h3 className="font-semibold text-gray-900">{label}</h3>
                         {required && (
                           <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">
                             Required
@@ -222,7 +247,8 @@ const Banner = () => {
                 </button>
                 <button
                   onClick={handleSavePreferences}
-                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  style={{ backgroundColor: accent }}
+                  className="flex-1 px-4 py-2.5 text-white font-medium rounded-lg hover:opacity-90 transition-colors"
                 >
                   Save Preferences
                 </button>
