@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/index.tsx","./src/main.tsx","./src/core/blocker.ts","./src/core/consentmode.ts","./src/core/init.ts","./src/core/store.ts","./src/ui/banner.tsx","./src/ui/preferences.tsx"],"version":"5.9.3"}
