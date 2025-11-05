@@ -1,7 +1,7 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { createRoot } from "react-dom/client";
 import Banner from "./ui/Banner";
-// Attach to window for direct script use
+// Make SDK global
 (function initLoveCookies() {
     if (typeof window !== "undefined") {
         window.LoveCookies = {
@@ -16,7 +16,5 @@ import Banner from "./ui/Banner";
                 root.render(_jsx(Banner, {}));
             },
         };
-        // Auto-init on load
-        window.LoveCookies.init();
     }
 })();

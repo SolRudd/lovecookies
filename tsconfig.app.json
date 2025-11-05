@@ -1,18 +1,15 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "useDefineForClassFields": true,
     "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
-    "jsx": "react-jsx",
-    "moduleResolution": "bundler",
-    "allowJs": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
+    "jsx": "react-jsx", // 👈 THIS LINE fixes the JSX issue
+    "lib": ["DOM", "ESNext"],
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
     "strict": true,
     "composite": true,
-    "noEmit": false,
-    "outDir": "build"
+    "outDir": "./build"
   },
   "include": ["src"]
 }
