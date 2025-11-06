@@ -3,96 +3,105 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 
 /**
- * 🍪 LoveCookies SDK
- * Mounts safely inside Shadow DOM
- * No Tailwind leaks. Debug logging included.
+ * 🍪 LoveCookies SDK — iframe loader (bulletproof)
+ * - No global CSS/JS leaks
+ * - Works with Next.js, WordPress, anything
  */
 
 (function initLoveCookies() {
   if (typeof window === "undefined") return;
 
-  // 🧩 Prevent double initialization
-  if ((window as any).__loveCookiesMounted) {
-    console.warn("[LoveCookies] Attempted double initialization — aborted.");
-    return;
-  }
+  // Prevent double mount
+  if ((window as any).__loveCookiesMounted) return;
   (window as any).__loveCookiesMounted = true;
 
-  // 🧠 Pre-mount Tailwind check
-  const beforeFont = window.getComputedStyle(document.body).fontFamily;
-  const beforeBg = window.getComputedStyle(document.body).backgroundColor;
-  console.log("%c[LoveCookies] Pre-mount snapshot:", "color:#10b981", {
-    fontFamily: beforeFont,
-    background: beforeBg,
-  });
-
-  // ✅ Create host
-  const host = document.createElement("div");
-  host.id = "lovecookies-root";
-  host.style.position = "fixed";
-  host.style.zIndex = "999999";
-  host.style.isolation = "isolate";
-  host.style.contain = "content";
-  document.body.appendChild(host);
-
-  // ✅ Create Shadow DOM for full isolation
-  const shadow = host.attachShadow({ mode: "open" });
-  const mount = document.createElement("div");
-  shadow.appendChild(mount);
-
-  // ✅ Inject styles into Shadow DOM (not globally)
-  const styleLink = document.createElement("link");
-  styleLink.rel = "stylesheet";
-  styleLink.href =
-    "https://cdn.jsdelivr.net/gh/SolRudd/lovecookies@main/dist/index.css";
-  shadow.appendChild(styleLink);
-
-  // ✅ Read dataset options from script tag
+  // Read dataset from <script> tag
   const scriptTag = document.currentScript as HTMLScriptElement | null;
   const color = scriptTag?.dataset.color || "#00c471";
   const policyUrl = scriptTag?.dataset.policy || "/privacy-policy";
   const rawPosition = scriptTag?.dataset.position;
   const validPositions = ["bottom-left", "bottom-right", "bottom-center"] as const;
-  type ValidPosition = (typeof validPositions)[number];
-  const safePosition: ValidPosition = validPositions.includes(rawPosition as any)
-    ? (rawPosition as ValidPosition)
-    : "bottom-center";
+  type Pos = (typeof validPositions)[number];
+  const position: Pos = (validPositions.includes(rawPosition as any)
+    ? (rawPosition as Pos)
+    : "bottom-center");
 
-  if (!validPositions.includes(rawPosition as any) && rawPosition) {
-    console.warn(
-      `[LoveCookies] Invalid data-position="${rawPosition}". Falling back to "bottom-center".`
-    );
-  }
+  // Host for positioning (no resets)
+  const host = document.createElement("div");
+  host.id = "lovecookies-root";
+  host.style.position = "fixed";
+  host.style.zIndex = "2147483647"; // max
+  host.style.left =
+    position === "bottom-left" ? "16px" :
+    position === "bottom-right" ? "auto" : "0";
+  host.style.right =
+    position === "bottom-right" ? "16px" :
+    position === "bottom-left" ? "auto" : "0";
+  host.style.bottom = "16px";
+  host.style.width = position === "bottom-center" ? "100%" : "auto";
+  host.style.pointerEvents = "none"; // widget handles its own
+  document.body.appendChild(host);
 
-  console.groupCollapsed("%c🍪 LoveCookies SDK Mounted", "color:#10b981");
-  console.log("Color:", color);
-  console.log("Policy URL:", policyUrl);
-  console.log("Position:", safePosition);
-  console.groupEnd();
+  // Create iframe
+  const iframe = document.createElement("iframe");
+  iframe.title = "LoveCookies";
+  iframe.style.border = "0";
+  iframe.style.width = position === "bottom-center" ? "100%" : "auto";
+  iframe.style.maxWidth = "680px";
+  iframe.style.pointerEvents = "auto";
+  iframe.style.background = "transparent";
+  iframe.setAttribute("aria-hidden", "false");
+  host.appendChild(iframe);
 
-  // ✅ Render inside Shadow DOM
-  try {
-    const root = ReactDOM.createRoot(mount);
-    root.render(
-      <React.StrictMode>
-        <App color={color} policyUrl={policyUrl} position={safePosition} />
-      </React.StrictMode>
-    );
-    console.log("✅ LoveCookies rendered successfully inside Shadow DOM.");
-  } catch (err) {
-    console.error("❌ [LoveCookies] Render failed:", err);
-  }
+  // Build iframe document via srcdoc
+  const cssHref = "https://cdn.jsdelivr.net/gh/SolRudd/lovecookies@main/dist/index.css";
+  const srcdoc = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="stylesheet" href="${cssHref}">
+    <style>
+      html,body{margin:0;padding:0;background:transparent;}
+      /* prevent layout jumps */
+      #mount{display:flex;justify-content:center;align-items:flex-end;min-height:0;}
+    </style>
+  </head>
+  <body>
+    <div id="mount"></div>
+  </body>
+</html>`;
 
-  // 🧠 Post-mount check
-  setTimeout(() => {
-    const afterFont = window.getComputedStyle(document.body).fontFamily;
-    const afterBg = window.getComputedStyle(document.body).backgroundColor;
-    if (afterFont !== beforeFont || afterBg !== beforeBg) {
-      console.warn("%c[LoveCookies] ⚠ Tailwind style drift detected!", "color:#f43f5e");
-      console.log("Before:", beforeFont, beforeBg);
-      console.log("After:", afterFont, afterBg);
-    } else {
-      console.log("%c[LoveCookies] ✅ Tailwind integrity preserved.", "color:#10b981");
+  // Set srcdoc then render React inside iframe
+  iframe.srcdoc = srcdoc;
+
+  iframe.addEventListener("load", () => {
+    try {
+      const doc = iframe.contentDocument!;
+      const mount = doc.getElementById("mount")!;
+      // Inject a tiny UMD bridge so ReactDOM from parent can render inside child
+      // (We just use the parent ReactDOM to keep bundle small)
+      (iframe.contentWindow as any).React = React;
+      (iframe.contentWindow as any).ReactDOM = ReactDOM;
+
+      const root = (iframe.contentWindow as any).ReactDOM.createRoot(mount);
+      root.render(
+        <React.StrictMode>
+          <App color={color} policyUrl={policyUrl} position={position} />
+        </React.StrictMode>
+      );
+
+      // Resize to fit content
+      const resize = () => {
+        // optional: tweak if you want dynamic height
+        iframe.style.height = mount.scrollHeight + "px";
+      };
+      resize();
+      new MutationObserver(resize).observe(mount, { childList: true, subtree: true });
+    } catch (e) {
+      console.error("[LoveCookies] render failed:", e);
     }
-  }, 500);
+  });
+
+  console.log("✅ LoveCookies (iframe) mounted safely.", { color, policyUrl, position });
 })();

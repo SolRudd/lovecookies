@@ -1,13 +1,6 @@
-/* ✅ LoveCookies internal styles */
-/* No Tailwind preflight here — keeps host site styles safe */
-
+/* LoveCookies internal styles — isolated in iframe */
 @tailwind components;
 @tailwind utilities;
-
-/* Optional: import only what the SDK actually needs */
-:host {
-  all: revert-layer;
-}
 
 .lovecookies-banner {
   font-family: inherit;
