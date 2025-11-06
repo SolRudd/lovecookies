@@ -1,13 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import "./index.css";
 
 /**
  * LoveCookies SDK
  * Universal loader — mounts safely inside Shadow DOM
  * Works with WordPress, React, Next.js, etc.
- * Includes internal debug link to SDK source.
+ * Keeps host styles sandboxed (no Tailwind breakage).
  */
 
 (function initLoveCookies() {
@@ -20,9 +19,12 @@ import "./index.css";
   // ✅ Create root host
   const host = document.createElement("div");
   host.id = "lovecookies-root";
-  host.style.all = "initial";
+  // ⚡ SAFER isolation: don’t nuke Tailwind globals
   host.style.position = "fixed";
   host.style.zIndex = "999999";
+  host.style.contain = "content"; // isolates layout & style
+  host.style.fontFamily = "inherit"; // keep same font
+  host.style.all = "unset"; // just resets local props, not the page
   document.body.appendChild(host);
 
   // ✅ Create Shadow DOM for full isolation
@@ -30,7 +32,7 @@ import "./index.css";
   const mount = document.createElement("div");
   shadow.appendChild(mount);
 
-  // ✅ Load Tailwind styles into the Shadow DOM (not globally)
+  // ✅ Load Tailwind styles inside Shadow DOM (not globally)
   const styleLink = document.createElement("link");
   styleLink.rel = "stylesheet";
   styleLink.href =
