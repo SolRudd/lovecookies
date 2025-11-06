@@ -7,6 +7,7 @@ import "./index.css";
  * LoveCookies SDK
  * Universal loader — mounts safely inside Shadow DOM
  * Works with WordPress, React, Next.js, etc.
+ * Includes internal debug link to SDK source.
  */
 
 (function initLoveCookies() {
@@ -29,7 +30,7 @@ import "./index.css";
   const mount = document.createElement("div");
   shadow.appendChild(mount);
 
-  // ✅ Load Tailwind styles inside the Shadow DOM
+  // ✅ Load Tailwind styles into the Shadow DOM (not globally)
   const styleLink = document.createElement("link");
   styleLink.rel = "stylesheet";
   styleLink.href =
@@ -44,7 +45,6 @@ import "./index.css";
   // ✅ Validate and normalize position safely
   const rawPosition = scriptTag?.dataset.position;
   const validPositions = ["bottom-left", "bottom-right", "bottom-center"] as const;
-
   type ValidPosition = (typeof validPositions)[number];
   const safePosition: ValidPosition = validPositions.includes(rawPosition as any)
     ? (rawPosition as ValidPosition)
@@ -55,6 +55,15 @@ import "./index.css";
       `[LoveCookies] Invalid data-position="${rawPosition}". Falling back to "bottom-center".`
     );
   }
+
+  // ✅ Debug info for developers
+  console.log(
+    "%c🍪 LoveCookies SDK Loaded",
+    "color:#10b981;font-weight:bold;font-size:14px;"
+  );
+  console.log(
+    "→ Source: https://github.com/SolRudd/lovecookies/tree/main/sdk"
+  );
 
   // ✅ Render app inside the Shadow DOM
   const root = ReactDOM.createRoot(mount);
