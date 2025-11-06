@@ -1,7 +1,15 @@
-@tailwind base;
+/* ✅ LoveCookies internal styles */
+/* No Tailwind preflight here — keeps host site styles safe */
+
 @tailwind components;
 @tailwind utilities;
 
-html, body {
-  background-color: #f9fafb;
+/* Optional: import only what the SDK actually needs */
+:host {
+  all: revert-layer;
+}
+
+.lovecookies-banner {
+  font-family: inherit;
+  font-size: 14px;
 }
