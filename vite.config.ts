@@ -33,8 +33,5 @@ export default defineConfig({
     emptyOutDir: true, // ✅ Clean /dist before each build
     sourcemap: false,
   },
-  // ✅ Ensures proper React handling for builds
-  esbuild: {
-    jsxInject: `import React from 'react'`,
-  },
+ 
 });
