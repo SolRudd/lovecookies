@@ -3,23 +3,22 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 
 /**
- * LoveCookies SDK
- * Universal loader — mounts safely inside Shadow DOM
- * Works with WordPress, React, Next.js, etc.
- * Includes visual + console debugging to detect any CSS leaks.
+ * 🍪 LoveCookies SDK
+ * Mounts safely inside Shadow DOM
+ * No Tailwind leaks. Debug logging included.
  */
 
 (function initLoveCookies() {
   if (typeof window === "undefined") return;
 
-  // 🔒 Prevent double initialization
+  // 🧩 Prevent double initialization
   if ((window as any).__loveCookiesMounted) {
     console.warn("[LoveCookies] Attempted double initialization — aborted.");
     return;
   }
   (window as any).__loveCookiesMounted = true;
 
-  // 🧠 Pre-mount Tailwind check (detects global style loss)
+  // 🧠 Pre-mount Tailwind check
   const beforeFont = window.getComputedStyle(document.body).fontFamily;
   const beforeBg = window.getComputedStyle(document.body).backgroundColor;
   console.log("%c[LoveCookies] Pre-mount snapshot:", "color:#10b981", {
@@ -27,14 +26,13 @@ import App from "./App";
     background: beforeBg,
   });
 
-  // ✅ Create root host (no CSS reset!)
+  // ✅ Create host
   const host = document.createElement("div");
   host.id = "lovecookies-root";
   host.style.position = "fixed";
   host.style.zIndex = "999999";
-  host.style.pointerEvents = "none"; // banner handles its own clicks
-  host.style.isolation = "isolate"; // isolate stacking context only
-  host.style.contain = "content"; // isolate layout + paint
+  host.style.isolation = "isolate";
+  host.style.contain = "content";
   document.body.appendChild(host);
 
   // ✅ Create Shadow DOM for full isolation
@@ -42,14 +40,14 @@ import App from "./App";
   const mount = document.createElement("div");
   shadow.appendChild(mount);
 
-  // ✅ Load Tailwind styles inside Shadow DOM (not globally)
+  // ✅ Inject styles into Shadow DOM (not globally)
   const styleLink = document.createElement("link");
   styleLink.rel = "stylesheet";
   styleLink.href =
     "https://cdn.jsdelivr.net/gh/SolRudd/lovecookies@main/dist/index.css";
   shadow.appendChild(styleLink);
 
-  // ✅ Read dataset options from <script> tag
+  // ✅ Read dataset options from script tag
   const scriptTag = document.currentScript as HTMLScriptElement | null;
   const color = scriptTag?.dataset.color || "#00c471";
   const policyUrl = scriptTag?.dataset.policy || "/privacy-policy";
@@ -66,15 +64,13 @@ import App from "./App";
     );
   }
 
-  // 🧩 Debug info
   console.groupCollapsed("%c🍪 LoveCookies SDK Mounted", "color:#10b981");
   console.log("Color:", color);
   console.log("Policy URL:", policyUrl);
   console.log("Position:", safePosition);
-  console.log("Shadow root attached:", !!shadow);
   console.groupEnd();
 
-  // ✅ Render app inside Shadow DOM
+  // ✅ Render inside Shadow DOM
   try {
     const root = ReactDOM.createRoot(mount);
     root.render(
@@ -87,7 +83,7 @@ import App from "./App";
     console.error("❌ [LoveCookies] Render failed:", err);
   }
 
-  // 🧠 Post-mount Tailwind check
+  // 🧠 Post-mount check
   setTimeout(() => {
     const afterFont = window.getComputedStyle(document.body).fontFamily;
     const afterBg = window.getComputedStyle(document.body).backgroundColor;
