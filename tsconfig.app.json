@@ -11,5 +11,5 @@
     "composite": true,
     "outDir": "./build"
   },
-  "include": ["src", "embed/init.ts", "scripts"]
+  "include": ["src", "src/embed/init.ts", "scripts"]
 }

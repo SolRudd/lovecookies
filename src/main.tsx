@@ -4,19 +4,26 @@ import App from "./App";
 
 /**
  * 🍪 LoveCookies SDK — iframe loader (bulletproof)
- * - No global CSS/JS leaks
- * - Works with Next.js, WordPress, anything
+ * - Sandboxed: no CSS/JS leaking to host (Next.js/Tailwind safe)
+ * - Works on any site (WordPress, Shopify, Webflow, etc.)
  */
 
 (function initLoveCookies() {
   if (typeof window === "undefined") return;
 
-  // Prevent double mount
+  // prevent duplicate init
   if ((window as any).__loveCookiesMounted) return;
   (window as any).__loveCookiesMounted = true;
 
-  // Read dataset from <script> tag
-  const scriptTag = document.currentScript as HTMLScriptElement | null;
+  // robust script tag detection (fallback if currentScript is null)
+  function getSelfScript(): HTMLScriptElement | null {
+    const cs = document.currentScript as HTMLScriptElement | null;
+    if (cs) return cs;
+    const scripts = Array.from(document.getElementsByTagName("script"));
+    return scripts.reverse().find(s => /lovecookies\.(umd|iife)\.js/.test(s.src)) || null;
+  }
+
+  const scriptTag = getSelfScript();
   const color = scriptTag?.dataset.color || "#00c471";
   const policyUrl = scriptTag?.dataset.policy || "/privacy-policy";
   const rawPosition = scriptTag?.dataset.position;
@@ -26,23 +33,19 @@ import App from "./App";
     ? (rawPosition as Pos)
     : "bottom-center");
 
-  // Host for positioning (no resets)
+  // host container
   const host = document.createElement("div");
   host.id = "lovecookies-root";
   host.style.position = "fixed";
-  host.style.zIndex = "2147483647"; // max
-  host.style.left =
-    position === "bottom-left" ? "16px" :
-    position === "bottom-right" ? "auto" : "0";
-  host.style.right =
-    position === "bottom-right" ? "16px" :
-    position === "bottom-left" ? "auto" : "0";
+  host.style.zIndex = "2147483647";
+  host.style.left = position === "bottom-left" ? "16px" : position === "bottom-right" ? "auto" : "0";
+  host.style.right = position === "bottom-right" ? "16px" : position === "bottom-left" ? "auto" : "0";
   host.style.bottom = "16px";
   host.style.width = position === "bottom-center" ? "100%" : "auto";
-  host.style.pointerEvents = "none"; // widget handles its own
+  host.style.pointerEvents = "none";
   document.body.appendChild(host);
 
-  // Create iframe
+  // iframe sandbox
   const iframe = document.createElement("iframe");
   iframe.title = "LoveCookies";
   iframe.style.border = "0";
@@ -53,8 +56,9 @@ import App from "./App";
   iframe.setAttribute("aria-hidden", "false");
   host.appendChild(iframe);
 
-  // Build iframe document via srcdoc
+  // link to the CSS your build emits (your CDN or same-origin path in dev)
   const cssHref = "https://cdn.jsdelivr.net/gh/SolRudd/lovecookies@main/dist/index.css";
+
   const srcdoc = `<!doctype html>
 <html>
   <head>
@@ -63,7 +67,6 @@ import App from "./App";
     <link rel="stylesheet" href="${cssHref}">
     <style>
       html,body{margin:0;padding:0;background:transparent;}
-      /* prevent layout jumps */
       #mount{display:flex;justify-content:center;align-items:flex-end;min-height:0;}
     </style>
   </head>
@@ -72,28 +75,26 @@ import App from "./App";
   </body>
 </html>`;
 
-  // Set srcdoc then render React inside iframe
   iframe.srcdoc = srcdoc;
 
   iframe.addEventListener("load", () => {
     try {
       const doc = iframe.contentDocument!;
       const mount = doc.getElementById("mount")!;
-      // Inject a tiny UMD bridge so ReactDOM from parent can render inside child
-      // (We just use the parent ReactDOM to keep bundle small)
-      (iframe.contentWindow as any).React = React;
-      (iframe.contentWindow as any).ReactDOM = ReactDOM;
 
-      const root = (iframe.contentWindow as any).ReactDOM.createRoot(mount);
+      // render React app INSIDE iframe (React is bundled with SDK)
+      const root = (iframe.contentWindow as any).ReactDOM
+        ? (iframe.contentWindow as any).ReactDOM.createRoot(mount)
+        : ReactDOM.createRoot(mount);
+
       root.render(
         <React.StrictMode>
           <App color={color} policyUrl={policyUrl} position={position} />
         </React.StrictMode>
       );
 
-      // Resize to fit content
+      // auto-resize
       const resize = () => {
-        // optional: tweak if you want dynamic height
         iframe.style.height = mount.scrollHeight + "px";
       };
       resize();

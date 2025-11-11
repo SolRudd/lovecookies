@@ -6,32 +6,25 @@ export default defineConfig({
   plugins: [react()],
   build: {
     lib: {
-      // ✅ Entry point for SDK
       entry: path.resolve(__dirname, "src/main.tsx"),
       name: "LoveCookies",
       fileName: (format) => `lovecookies.${format}.js`,
-      formats: ["umd"],
+      formats: ["umd"], // build one universal JS file
     },
     rollupOptions: {
-      // ✅ Keep React external so it’s not bundled into the SDK
-      external: ["react", "react-dom"],
+      // Bundle React so it works standalone (WordPress, Webflow, etc.)
+      external: [],
       output: {
-        globals: {
-          react: "React",
-          "react-dom": "ReactDOM",
-        },
-        // ✅ Don’t inject global CSS or fonts from Tailwind into the host page
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name?.endsWith(".css")) {
-            return "index.css"; // ensures clean static CSS filename
-          }
-          return "[name].[ext]";
-        },
+        assetFileNames: (assetInfo) =>
+          assetInfo.name?.endsWith(".css") ? "index.css" : "[name].[ext]",
       },
     },
-    cssCodeSplit: true, // ✅ Separate CSS from JS
-    emptyOutDir: true, // ✅ Clean /dist before each build
+    cssCodeSplit: true,
+    emptyOutDir: true,
     sourcemap: false,
   },
- 
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("production"), // ✅ fix "process is not defined"
+    global: "window", // ✅ fix "global is not defined"
+  },
 });
