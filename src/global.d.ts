@@ -1,10 +1,10 @@
-import type { LoveCookiesInitOptions } from "./types";
+import type { LoveCookiesPublicAPI } from "./types";
 
 declare global {
   interface Window {
-    LoveCookies: { init: (opts?: LoveCookiesInitOptions) => void };
-    gtag?: (...args: any[]) => void;
-    dataLayer?: any[];
+    LoveCookies: LoveCookiesPublicAPI;
+    gtag?: (...args: unknown[]) => void;
+    dataLayer?: Record<string, unknown>[];
   }
 }
 

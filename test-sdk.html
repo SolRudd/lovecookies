@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LoveCookies SDK Test</title>
+    <link rel="stylesheet" href="./dist/lovecookies.css" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        margin: 0;
+        padding: 40px;
+        background: #fafafa;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>LoveCookies SDK Test</h1>
+    <p>Open the console to inspect the LoveCookies API.</p>
+
+    <script src="./dist/lovecookies.umd.js"></script>
+    <script>
+      console.log("window.LoveCookies:", window.LoveCookies);
+
+      window.LoveCookies?.init({
+        color: "#00c471",
+        position: "bottom-center",
+        policyUrl: "/privacy-policy",
+      });
+    </script>
+  </body>
+</html>

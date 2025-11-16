@@ -1,8 +1,0 @@
-/* LoveCookies internal styles — isolated in iframe */
-@tailwind components;
-@tailwind utilities;
-
-.lovecookies-banner {
-  font-family: inherit;
-  font-size: 14px;
-}

@@ -1,51 +1,116 @@
-// src/core/store.ts
+import type { ConsentSnapshot, ConsentState } from "../types";
 
-export interface ConsentState {
-  [category: string]: boolean;
+const STORAGE_KEY = "LoveCookiesConsent";
+const COOKIE_PREFIX = "lovecookies_";
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+
+function isBrowser() {
+  return typeof window !== "undefined" && typeof document !== "undefined";
 }
 
-// Keep an in-memory copy
-const state: ConsentState = {};
+export function loadConsent(defaultState: ConsentState): ConsentSnapshot {
+  if (!isBrowser()) {
+    return {
+      categories: { ...defaultState },
+      timestamp: null,
+      hasConsent: false,
+      version: 1,
+    };
+  }
 
-// Save consent to localStorage and cookies
-export function setConsent(category: string, value: boolean) {
-  state[category] = value;
-  document.cookie = `lovecookies_${category}=${value};path=/;max-age=${
-    365 * 24 * 60 * 60
-  }`;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      return {
+        categories: { ...defaultState },
+        timestamp: null,
+        hasConsent: false,
+        version: 1,
+      };
+    }
 
-  const stored = JSON.parse(localStorage.getItem("cookieConsent") || "{}");
-  stored[category] = value;
-  localStorage.setItem("cookieConsent", JSON.stringify(stored));
+    const parsed = JSON.parse(stored) as {
+      categories?: ConsentState;
+      timestamp?: number;
+      version?: number;
+    };
+
+    const snapshot: ConsentSnapshot = {
+      categories: parsed.categories ? { ...defaultState, ...parsed.categories } : { ...defaultState },
+      timestamp: parsed.timestamp ?? null,
+      hasConsent: Boolean(parsed.timestamp),
+      version: parsed.version ?? 1,
+    };
+
+    syncCookies(snapshot.categories);
+    return snapshot;
+  } catch {
+    return {
+      categories: { ...defaultState },
+      timestamp: null,
+      hasConsent: false,
+      version: 1,
+    };
+  }
 }
 
-// Retrieve consent from memory, localStorage, or cookies
-export function getConsent(category: string): boolean | undefined {
-  if (state[category] !== undefined) return state[category];
+export function persistConsent(state: ConsentState): ConsentSnapshot {
+  const snapshot: ConsentSnapshot = {
+    categories: { ...state },
+    timestamp: Date.now(),
+    hasConsent: true,
+    version: 1,
+  };
 
-  const stored = JSON.parse(localStorage.getItem("cookieConsent") || "{}");
-  if (stored[category] !== undefined) return stored[category];
+  if (isBrowser()) {
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          categories: snapshot.categories,
+          timestamp: snapshot.timestamp,
+          version: snapshot.version,
+        })
+      );
+    } catch {
+      // noop
+    }
+    syncCookies(snapshot.categories);
+  }
 
-  const match = document.cookie.match(
-    new RegExp(`(?:^| )lovecookies_${category}=([^;]*)`)
-  );
-  return match ? match[1] === "true" : undefined;
+  return snapshot;
 }
 
-// Get all consent states
-export function getAllConsent(): ConsentState {
-  return JSON.parse(localStorage.getItem("cookieConsent") || "{}");
+export function clearStoredConsent(defaultState: ConsentState): ConsentSnapshot {
+  if (isBrowser()) {
+    window.localStorage.removeItem(STORAGE_KEY);
+    clearCookies();
+  }
+
+  return {
+    categories: { ...defaultState },
+    timestamp: null,
+    hasConsent: false,
+    version: 1,
+  };
 }
 
-// Clear all consent (for dev/testing)
-export function clearConsent() {
-  localStorage.removeItem("cookieConsent");
-  document.cookie
-    .split(";")
-    .forEach((c) => {
-      if (c.trim().startsWith("lovecookies_")) {
-        document.cookie = `${c.split("=")[0]}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
-      }
-    });
-  for (const key in state) delete state[key];
+function syncCookies(state: ConsentState) {
+  if (!isBrowser()) return;
+  Object.entries(state).forEach(([category, granted]) => {
+    const key = `${COOKIE_PREFIX}${category}`;
+    document.cookie = `${key}=${granted ? "1" : "0"};path=/;max-age=${ONE_YEAR_SECONDS};SameSite=Lax`;
+  });
+}
+
+function clearCookies() {
+  if (!isBrowser()) return;
+  const cookies = document.cookie ? document.cookie.split(";") : [];
+  cookies.forEach((cookie) => {
+    const [name] = cookie.split("=");
+    const trimmed = name.trim();
+    if (trimmed.startsWith(COOKIE_PREFIX)) {
+      document.cookie = `${trimmed}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax`;
+    }
+  });
 }

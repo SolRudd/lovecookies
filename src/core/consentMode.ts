@@ -1,33 +1,34 @@
-// src/core/consentMode.ts
+import type { ConsentState } from "../types";
 
 declare global {
   interface Window {
-    gtag?: (...args: any[]) => void;
-    dataLayer?: any[];
+    gtag?: (...args: unknown[]) => void;
+    dataLayer?: Record<string, unknown>[];
   }
 }
 
-export type ConsentChoice = "accepted" | "declined";
+export function syncConsentMode(consent: ConsentState) {
+  if (typeof window === "undefined") return;
 
-export function updateConsent(consent: ConsentChoice) {
-  if (typeof window.gtag !== "function") return;
+  const granted = (category: string) => Boolean(consent[category]);
 
-  const granted = consent === "accepted";
-
-  window.gtag("consent", "update", {
-    ad_storage: granted ? "granted" : "denied",
-    analytics_storage: granted ? "granted" : "denied",
-    functionality_storage: "granted",
-    personalization_storage: granted ? "granted" : "denied",
+  const payload = {
+    ad_storage: granted("marketing") || granted("advertising") ? "granted" : "denied",
+    analytics_storage: granted("analytics") ? "granted" : "denied",
+    functionality_storage: granted("functional") ? "granted" : "denied",
     security_storage: "granted",
-  });
+    ad_user_data: granted("marketing") || granted("advertising") ? "granted" : "denied",
+    ad_personalization: granted("personalization") ? "granted" : "denied",
+  };
 
-  // Push to dataLayer for GTM triggers
+  if (typeof window.gtag === "function") {
+    window.gtag("consent", "update", payload);
+  }
+
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({
     event: "lc_consent_update",
     consent,
+    payload,
   });
-
-  console.log("LoveCookies: consent updated →", consent);
 }

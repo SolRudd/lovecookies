@@ -1,8 +1,15 @@
-import { updateConsent } from "../core/consentMode";
-import { initBlocker } from "../core/blocker";
+import LoveCookies from "../index";
 
-(function autoInit() {
-  initBlocker();
-  updateConsent("declined");
-  console.log("LoveCookies autoInit complete");
+(function exposeSDK() {
+  if (typeof window === "undefined") return;
+  if (!window.LoveCookies) {
+    window.LoveCookies = LoveCookies;
+  }
+
+  const script = document.currentScript as HTMLScriptElement | null;
+  if (script) {
+    window.dispatchEvent(
+      new CustomEvent("LoveCookiesScriptReady", { detail: { dataset: script.dataset } })
+    );
+  }
 })();
